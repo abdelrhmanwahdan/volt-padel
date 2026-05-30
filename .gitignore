@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+.env
+.env*.local
+.vercel
+.wrangler
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store
+
+# Source media (large) — kept locally, never committed
+frames/
+videos/
+images/
+logs/

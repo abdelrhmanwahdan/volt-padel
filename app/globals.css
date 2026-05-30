@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+@theme inline {
+  /* Brand palette — VÖLT */
+  --color-bg: oklch(0.07 0 0);
+  --color-bg-elev: oklch(0.11 0 0);
+  --color-fg: oklch(0.98 0 0);
+  --color-fg-muted: oklch(0.68 0 0);          /* 4.5:1+ on bg */
+  --color-fg-faint: oklch(0.52 0 0);          /* tuned up from 0.38 for AA */
+  --color-border: oklch(0.2 0 0);
+  --color-border-strong: oklch(0.32 0 0);
+  /* Electric green #A8FF00 in OKLCH */
+  --color-accent: oklch(0.92 0.27 130);
+  --color-accent-dim: oklch(0.55 0.18 130);
+
+  --font-sans: var(--font-body), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-numeric), ui-monospace, "SF Mono", monospace;
+  --font-display: var(--font-heading), "Barlow Condensed", system-ui, sans-serif;
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+  html,
+  body {
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: var(--color-accent);
+    color: var(--color-bg);
+  }
+  /* Global focus ring — keyboard only */
+  :focus { outline: none; }
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+  /* Skip link — appears on tab focus */
+  .skip-link {
+    position: absolute;
+    top: -100px;
+    left: 16px;
+    z-index: 100;
+    padding: 0.5rem 1rem;
+    background: var(--color-accent);
+    color: var(--color-bg);
+    font-weight: 600;
+    border-radius: 999px;
+    transition: top 200ms ease-out;
+  }
+  .skip-link:focus { top: 16px; }
+  /* Custom scrollbar tuned to brand */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--color-bg); }
+  ::-webkit-scrollbar-thumb { background: var(--color-border-strong); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-fg-muted); }
+  /* Reduced motion — kill all motion globally */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@utility text-display {
+  font-family: var(--font-display);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 0.9;
+}
+
+@utility text-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.32em;
+  color: var(--color-fg-muted);
+}
+
+@utility accent-glow {
+  box-shadow: 0 0 30px -8px var(--color-accent), 0 0 80px -30px var(--color-accent);
+}
+
+@utility scrollbar-hide {
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+@keyframes scan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
