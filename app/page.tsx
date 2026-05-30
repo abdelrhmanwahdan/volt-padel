@@ -4,7 +4,7 @@ import ScrollCanvas from "@/components/scroll-canvas";
 import ChapterVideo from "@/components/chapter-video";
 import SpecsStrip from "@/components/specs-strip";
 import { PRODUCT } from "@/lib/product";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, mediaUrl } from "@/lib/utils";
 import { ArrowRight } from "lucide-react";
 
 const CHAPTERS = [
@@ -39,7 +39,7 @@ export default function Home() {
     <>
       {/* CHAPTER 1 — HERO (electric strike, plays once) */}
       <HeroVideo
-        src="/videos/hero.mp4"
+        src={mediaUrl("/videos/hero.mp4")}
         poster="/posters/hero.webp"
         productName="VÖLT"
         tagline="Charged · Pro 3K · 2026"
@@ -65,7 +65,7 @@ export default function Home() {
 
       {/* CHAPTER 4 — CHARGE (vid3, scroll-scrubbed) */}
       <ChapterVideo
-        src="/videos/charge.mp4"
+        src={mediaUrl("/videos/charge.mp4")}
         poster="/posters/charge.webp"
         eyebrow="Engineered · Charged"
         title="It wakes up the moment you do."
@@ -77,7 +77,7 @@ export default function Home() {
 
       {/* CHAPTER 5 — IMPACT (vid4 trimmed to 3s ball-departure, scroll-scrubbed) */}
       <ChapterVideo
-        src="/videos/impact.mp4"
+        src={mediaUrl("/videos/impact.mp4")}
         poster="/posters/impact.webp"
         eyebrow="Impact · Sweet Spot"
         title="The strike that sounds right."
