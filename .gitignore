@@ -9,8 +9,9 @@ out
 next-env.d.ts
 .DS_Store
 
-# Source media (large) — kept locally, never committed
-frames/
-videos/
-images/
-logs/
+# Top-level source media folders (large raw assets — kept locally, never committed).
+# Leading "/" pins to repo root so we don't accidentally match public/videos etc.
+/frames/
+/videos/
+/images/
+/logs/
