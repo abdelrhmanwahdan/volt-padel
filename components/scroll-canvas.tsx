@@ -69,7 +69,7 @@ export default function ScrollCanvas({
         dw = c.height * imgRatio;
       }
       if (isPortrait) {
-        const scale = 1.5;
+        const scale = 1.8;
         dw *= scale;
         dh *= scale;
       }
@@ -108,13 +108,14 @@ export default function ScrollCanvas({
   return (
     <section ref={sectionRef} className="relative w-full" style={{ height: "400vh" }}>
       <div className="sticky top-0 h-screen w-full">
-        {/* Mobile: canvas occupies top 60vh; text overlay sits below.
-            Desktop: canvas fills the screen and text is side-anchored over it. */}
+        {/* Mobile: canvas takes top 50vh, racket scaled 1.8x to fill it tightly.
+            Text anchors immediately below — no dead space, no overlap with the
+            bottom tab bar. Desktop unchanged: canvas full screen, text side-anchored. */}
         <canvas
           ref={canvasRef}
-          className="absolute top-0 left-0 right-0 h-[60vh] md:h-full w-full"
+          className="absolute top-0 left-0 right-0 h-[50vh] md:h-full w-full"
         />
-        <div className="absolute top-[60vh] left-0 right-0 bottom-0 md:inset-0 pointer-events-none">
+        <div className="absolute top-[50vh] left-0 right-0 bottom-0 md:inset-0 pointer-events-none">
           {chapters.map((ch, i) => {
             const start = i / chapters.length;
             const end = (i + 1) / chapters.length;
@@ -172,12 +173,12 @@ function ChapterText({
     <div
       ref={ref}
       className={`absolute px-6 max-w-[28rem] transition-none
-        inset-0 m-auto h-fit text-center
-        md:inset-auto md:top-1/2 md:-translate-y-1/2
+        top-3 left-0 right-0 mx-auto h-fit text-center
+        md:inset-auto md:top-1/2 md:-translate-y-1/2 md:mx-0
         ${
           side === "right"
-            ? "md:right-16 md:text-right"
-            : "md:left-16 md:text-left"
+            ? "md:right-16 md:left-auto md:text-right"
+            : "md:left-16 md:right-auto md:text-left"
         }`}
       style={{ opacity: 0 }}
     >
