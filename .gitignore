@@ -15,3 +15,8 @@ next-env.d.ts
 /videos/
 /images/
 /logs/
+
+# Asset enhancement (Real-ESRGAN) artifacts — never commit
+/public.bak/
+/.upscale.log
+/.upscale_work/
