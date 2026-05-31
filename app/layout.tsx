@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Barlow_Condensed, Chivo, JetBrains_Mono } from "next/font/google";
 import Nav from "@/components/nav";
 import Footer from "@/components/footer";
+import HeroLoader from "@/components/hero-loader";
 import "./globals.css";
 
 // Athletic Performance pairing — Barlow Condensed (compressed, fast, athletic)
@@ -51,6 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preload" as="image" href="/posters/hero.webp" type="image/webp" />
       </head>
       <body className="min-h-screen flex flex-col bg-bg text-fg antialiased">
+        <HeroLoader />
         <a href="#main" className="skip-link">
           Skip to content
         </a>
