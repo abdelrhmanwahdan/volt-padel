@@ -79,12 +79,29 @@ export default function ScrollScrubVideo({
       rafId = requestAnimationFrame(tick);
     };
 
+    // iOS Safari paints a black rectangle for un-primed <video> elements until
+    // play() is called. Without this, scroll-scrub on iOS shows pure black.
+    const prime = async () => {
+      try {
+        await video.play();
+        video.pause();
+      } catch {
+        /* play() can reject on some browsers — fall through */
+      }
+    };
+
     const start = () => {
       if (running) return;
       running = true;
-      setReady(true);
+      prime();
       rafId = requestAnimationFrame(tick);
     };
+
+    // Mark ready only after a frame has actually been painted (first seeked
+    // event), so the poster fallback stays visible until the video can show
+    // real frames. Prevents the iOS-Safari black-screen flash.
+    const onSeeked = () => setReady(true);
+    video.addEventListener("seeked", onSeeked);
 
     if (video.readyState >= 1) start();
     else video.addEventListener("loadedmetadata", start, { once: true });
@@ -92,6 +109,7 @@ export default function ScrollScrubVideo({
     return () => {
       cancelAnimationFrame(rafId);
       video.removeEventListener("loadedmetadata", start);
+      video.removeEventListener("seeked", onSeeked);
     };
   }, [reducedMotion]);
 
@@ -111,7 +129,12 @@ export default function ScrollScrubVideo({
           />
         ) : (
           <>
-            {poster && !ready && (
+            {/* Permanent poster backdrop — stays behind the video so iOS Safari
+                never reveals its black un-primed video rectangle. Once the
+                video has painted its first frame (ready === true), it covers
+                the poster naturally on browsers that paint, and harmlessly
+                sits on top of the poster on browsers that don't. */}
+            {poster && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={poster}
@@ -128,7 +151,8 @@ export default function ScrollScrubVideo({
               playsInline
               preload="auto"
               aria-hidden
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
+              style={{ opacity: ready ? 1 : 0 }}
             />
           </>
         )}
