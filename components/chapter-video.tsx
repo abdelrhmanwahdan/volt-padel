@@ -27,12 +27,14 @@ export default function ChapterVideo({
   // flex-col means items-* is horizontal (cross-axis) and justify-* is vertical (main-axis).
   // bottom-left  = items-start (left)  + justify-end (bottom)
   // bottom-right = items-end   (right) + justify-end (bottom)
+  // Mobile bottom padding uses calc(6rem + env(safe-area-inset-bottom)) so the
+  // title clears the 64px tab bar + iPhone home-indicator gutter.
   const alignClasses =
     align === "center"
-      ? "items-center justify-center text-center"
+      ? "items-center justify-center text-center pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-0"
       : align === "bottom-right"
-        ? "items-end justify-end text-right pb-20 pr-6 sm:pb-24 sm:pr-10 lg:pb-32 lg:pr-20"
-        : "items-start justify-end text-left pb-20 pl-6 sm:pb-24 sm:pl-10 lg:pb-32 lg:pl-20";
+        ? "items-end justify-end text-right pb-[calc(6rem+env(safe-area-inset-bottom))] pr-6 sm:pb-24 sm:pr-10 lg:pb-32 lg:pr-20"
+        : "items-start justify-end text-left pb-[calc(6rem+env(safe-area-inset-bottom))] pl-6 sm:pb-24 sm:pl-10 lg:pb-32 lg:pl-20";
 
   const sideGradientDir =
     align === "bottom-right" ? "to left" : align === "center" ? "to top" : "to right";
@@ -58,14 +60,16 @@ export default function ChapterVideo({
       />
       <div className={`relative z-10 h-full w-full flex flex-col px-6 ${alignClasses}`}>
         <div className="max-w-[34rem]">
-          <p className="text-eyebrow mb-4">{eyebrow}</p>
+          <p className="hidden md:block text-eyebrow mb-4">{eyebrow}</p>
           <h2
-            className="text-display text-fg mb-5"
+            className="text-display text-fg md:mb-5"
             style={{ fontSize: "clamp(2.8rem, 6vw, 5.5rem)" }}
           >
             {title}
           </h2>
-          <p className="text-fg-muted text-base md:text-lg leading-relaxed">{body}</p>
+          <p className="hidden md:block text-fg-muted text-base md:text-lg leading-relaxed">
+            {body}
+          </p>
         </div>
       </div>
     </ScrollScrubVideo>
