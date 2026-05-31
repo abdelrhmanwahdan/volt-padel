@@ -59,12 +59,12 @@ export default function TechnologyPage() {
       {/* Layer stack */}
       <section className="px-6 lg:px-10 py-12 max-w-[1400px] mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-12 lg:gap-20">
-          <div className="lg:sticky lg:top-24 lg:self-start aspect-[4/5] rounded-2xl bg-bg-elev border border-border overflow-hidden relative">
+          <div className="lg:sticky lg:top-24 lg:self-start aspect-[3/4] rounded-2xl bg-bg-elev border border-border overflow-hidden relative">
             <Image
-              src="/hero/desktop/frame_0074.webp"
+              src="/product/racket_front.webp"
               alt="VÖLT Pro 3K"
               fill
-              className="object-contain p-10"
+              className="object-contain p-4 md:p-8"
               sizes="(min-width: 1024px) 560px, 100vw"
             />
           </div>
