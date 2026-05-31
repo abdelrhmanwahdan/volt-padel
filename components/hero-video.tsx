@@ -31,11 +31,15 @@ export default function HeroVideo({
         }}
       />
 
-      {/* Off-axis title — broken left-aligned, anchored bottom-left, breaks the centered-hero AI template */}
+      {/* Off-axis title — broken left-aligned, anchored bottom-left, breaks the centered-hero AI template.
+          Mobile shows only the wordmark; padding clears the 64px bottom tab bar + iPhone home-indicator inset. */}
       <div className="absolute inset-0 flex pointer-events-none">
-        <div className="self-end w-full max-w-[1400px] mx-auto px-6 lg:px-10 pb-20 md:pb-24">
+        <div
+          className="self-end w-full max-w-[1400px] mx-auto px-6 lg:px-10 md:pb-24"
+          style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
+        >
           <div className="max-w-[18ch]">
-            <p className="text-eyebrow mb-5 text-fg-muted">{tagline}</p>
+            <p className="hidden md:block text-eyebrow mb-5 text-fg-muted">{tagline}</p>
             <h1
               className="text-display text-fg leading-[0.86]"
               style={{ fontSize: "clamp(4.5rem, 16vw, 14rem)" }}
@@ -46,8 +50,8 @@ export default function HeroVideo({
         </div>
       </div>
 
-      {/* Right-aligned hairline + scroll cue (off-axis, breaks symmetry) */}
-      <div className="absolute right-6 lg:right-10 bottom-10 flex flex-col items-end gap-3 pointer-events-none text-fg-muted">
+      {/* Right-aligned hairline + scroll cue (off-axis, desktop only) */}
+      <div className="hidden md:flex absolute right-6 lg:right-10 bottom-10 flex-col items-end gap-3 pointer-events-none text-fg-muted">
         <span className="text-eyebrow">Charged · 2026</span>
         <span className="inline-flex items-center gap-2 text-eyebrow">
           Scroll <ArrowDown className="w-3 h-3 animate-bounce" aria-hidden />
