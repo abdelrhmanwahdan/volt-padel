@@ -7,36 +7,51 @@ import { PRODUCT } from "@/lib/product";
 import { formatPrice, mediaUrl } from "@/lib/utils";
 import { ArrowRight } from "lucide-react";
 
-const CHAPTERS = [
+import type { ScrollChapter } from "@/components/scroll-canvas";
+
+const CHAPTERS: ScrollChapter[] = [
   {
     eyebrow: "01 · Carbon Face",
     title: "3K twill weave",
     body:
       "Tighter weave, snappier response. Wrist intent translates into shot direction without ringing.",
+    side: "right",
   },
   {
     eyebrow: "02 · Hex Hole Grid",
     title: "Cut drag, not power",
     body:
       "Hexagonal hole pattern displaces air evenly across the face. Faster swings, quieter strikes.",
+    side: "left",
   },
   {
     eyebrow: "03 · EVA Core",
     title: "Soft. Alive. Forgiving.",
     body:
       "Honeycomb EVA absorbs the brunt and gives it back. Bandeja becomes muscle memory.",
+    side: "right",
   },
   {
     eyebrow: "04 · Cold-Forged Frame",
     title: "Holds its geometry",
     body:
       "Anodized aluminum 6061 shrugs off cage hits and stays true across an entire season.",
+    side: "left",
   },
 ];
 
 export default function Home() {
   return (
     <>
+      {/* Route-scoped preload — only the home page uses the scroll-canvas frames.
+          React 19 hoists <link> elements out of JSX into <head>. */}
+      <link
+        rel="preload"
+        as="image"
+        href="/hero/desktop/frame_0001.webp"
+        type="image/webp"
+      />
+
       {/* CHAPTER 1 — HERO (electric strike, plays once) */}
       <HeroVideo
         src={mediaUrl("/videos/hero.mp4")}

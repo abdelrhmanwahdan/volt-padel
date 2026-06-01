@@ -10,6 +10,17 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   trailingSlash: false,
+  // Expose the build-time git ref to the client bundle so jsDelivr URLs are
+  // pinned to the deployed commit. On Cloudflare Pages, CF_PAGES_COMMIT_SHA is
+  // injected automatically per deploy — bumping the URL side-steps the 12h
+  // jsDelivr cache without needing the purge API. NEXT_PUBLIC_MEDIA_REF wins
+  // if explicitly set (e.g. a release tag).
+  env: {
+    NEXT_PUBLIC_MEDIA_REF:
+      process.env.NEXT_PUBLIC_MEDIA_REF ||
+      process.env.CF_PAGES_COMMIT_SHA ||
+      "main",
+  },
 };
 
 export default nextConfig;

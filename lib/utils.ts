@@ -17,9 +17,13 @@ export function formatPrice(cents: number, currency = "USD") {
 // Range requests for static assets, which leaves video.currentTime seeks frozen
 // on the poster frame. jsDelivr serves the same files straight from the GitHub
 // repo with full byte-range support, so we point at it in production.
-// In dev we keep the local /videos/* path for fast iteration.
-const JSDELIVR_BASE =
-  "https://cdn.jsdelivr.net/gh/abdelrhmanwahdan/volt-padel@main/public";
+//
+// The git ref is computed at build time in next.config.ts (env field) and
+// inlined into the client bundle so preview branches and pinned releases each
+// get their own jsDelivr URL — no shared cache with `main`. Bumping the ref
+// side-steps the 12h jsDelivr cache without needing the purge API.
+const MEDIA_REF = process.env.NEXT_PUBLIC_MEDIA_REF || "main";
+const JSDELIVR_BASE = `https://cdn.jsdelivr.net/gh/abdelrhmanwahdan/volt-padel@${MEDIA_REF}/public`;
 
 export function mediaUrl(path: string) {
   const clean = path.startsWith("/") ? path : `/${path}`;

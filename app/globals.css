@@ -108,3 +108,8 @@
   0% { transform: translateY(-100%); }
   100% { transform: translateY(100%); }
 }
+
+@keyframes voltpulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.08); }
+}

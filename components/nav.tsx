@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { useCart } from "@/lib/cart-store";
+import { useCart, useCartHydrated } from "@/lib/cart-store";
 import { cn } from "@/lib/utils";
 import {
   ShoppingBag,
@@ -31,11 +31,14 @@ const TABS = [
 export default function Nav() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const hydrated = useCartHydrated();
   const totalItems = useCart((s) => s.totalItems());
+  // Only trust the count after the persist middleware has rehydrated from
+  // localStorage — otherwise SSR sees 0 and the client sees N, which trips
+  // React 19's hydration mismatch warning.
+  const displayCount = hydrated ? totalItems : 0;
 
   useEffect(() => {
-    setMounted(true);
     const onScroll = () => setScrolled(window.scrollY > 20);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -75,15 +78,15 @@ export default function Nav() {
             <Link
               href="/cart"
               aria-label={
-                mounted && totalItems > 0
-                  ? `Cart, ${totalItems} item${totalItems > 1 ? "s" : ""}`
+                displayCount > 0
+                  ? `Cart, ${displayCount} item${displayCount > 1 ? "s" : ""}`
                   : "Cart"
               }
               className="relative h-9 px-3 flex items-center gap-2 rounded-full border border-border hover:border-accent hover:text-accent transition-colors"
             >
               <ShoppingBag className="w-4 h-4" strokeWidth={1.5} aria-hidden />
-              {mounted && totalItems > 0 && (
-                <span className="text-xs font-mono tabular-nums">{totalItems}</span>
+              {displayCount > 0 && (
+                <span className="text-xs font-mono tabular-nums">{displayCount}</span>
               )}
             </Link>
             <Link

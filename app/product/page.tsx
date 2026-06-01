@@ -4,11 +4,46 @@ import ProductGallery from "@/components/product-gallery";
 import StickyBuy from "@/components/sticky-buy";
 import { PRODUCT } from "@/lib/product";
 
-export const metadata = { title: "Pro 3K — The Charged Padel Racket" };
+export const metadata = {
+  title: "Pro 3K — The Charged Padel Racket",
+  description:
+    "VÖLT Pro 3K — a 3K carbon-fiber padel racket engineered for control players who attack on demand. Teardrop head, EVA honeycomb core, anodized 6061 frame.",
+  openGraph: {
+    title: "VÖLT Pro 3K — The Charged Padel Racket",
+    description:
+      "Engineered for control. Charged for impact. 370g · 3K carbon · EVA honeycomb · 6061 aluminum frame.",
+    images: ["/posters/hero.webp"],
+  },
+};
+
+// JSON-LD Product schema — lets Google show rich-card results for this page.
+const productJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Product",
+  name: PRODUCT.name,
+  description: PRODUCT.description,
+  sku: PRODUCT.id,
+  image: ["https://volt.example.com/posters/hero.webp"],
+  brand: { "@type": "Brand", name: "VÖLT" },
+  offers: {
+    "@type": "Offer",
+    priceCurrency: PRODUCT.currency,
+    price: (PRODUCT.price / 100).toFixed(2),
+    availability: PRODUCT.inStock
+      ? "https://schema.org/InStock"
+      : "https://schema.org/OutOfStock",
+    url: "https://volt.example.com/product",
+  },
+};
 
 export default function ProductPage() {
   return (
     <div className="pt-24">
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 py-10 lg:py-16">
         <ProductGallery name={PRODUCT.name} />
         <div id="configure">

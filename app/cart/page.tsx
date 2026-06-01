@@ -65,9 +65,10 @@ export default function CartPage() {
             <li key={line.sku} className="py-6 grid grid-cols-[80px_1fr_auto] gap-4 items-center">
               <div className="aspect-square relative rounded-xl bg-bg-elev overflow-hidden border border-border">
                 <Image
-                  src="/hero/desktop/frame_0074.webp"
+                  src={line.image ?? "/product/racket_front.webp"}
                   alt={`${line.name} thumbnail`}
                   fill
+                  loading="lazy"
                   className="object-contain p-2"
                   sizes="80px"
                 />

@@ -19,7 +19,8 @@ type Props = {
  * Pins for `scrollHeight` viewports. As the user scrolls through the pinned
  * region, video.currentTime is interpolated from 0 → duration. Scrolling
  * up plays in reverse. Falls back to a static poster image under
- * prefers-reduced-motion.
+ * prefers-reduced-motion. The scrub loop only runs while the section is
+ * intersecting the viewport — no idle CPU off-screen.
  */
 export default function ScrollScrubVideo({
   src,
@@ -51,9 +52,12 @@ export default function ScrollScrubVideo({
     let rafId = 0;
     let cur = 0;
     let lastSeek = -1;
+    let lastT = performance.now();
     let running = false;
+    let onScreen = false;
+    let primed = false;
 
-    const tick = () => {
+    const tick = (now: number) => {
       const duration = video.duration;
       if (!duration || Number.isNaN(duration)) {
         rafId = requestAnimationFrame(tick);
@@ -65,8 +69,12 @@ export default function ScrollScrubVideo({
       const scrolled = -rect.top;
       const progress = Math.max(0, Math.min(1, scrolled / distance));
       const target = progress * duration;
-      // Smooth interpolation toward target — gives a cinematic feel
-      cur += (target - cur) * 0.18;
+      // Delta-time eased interpolation — same feel at 30/60/120Hz.
+      // 0.18 was tuned at 16.66ms/frame; scale it by actual frame delta.
+      const dt = Math.min(now - lastT, 50);
+      lastT = now;
+      const k = 1 - Math.pow(1 - 0.18, dt / 16.66);
+      cur += (target - cur) * k;
       const next = Math.round(cur * 1000) / 1000;
       if (Math.abs(next - lastSeek) > 0.008) {
         try {
@@ -80,21 +88,31 @@ export default function ScrollScrubVideo({
     };
 
     // iOS Safari paints a black rectangle for un-primed <video> elements until
-    // play() is called. Without this, scroll-scrub on iOS shows pure black.
+    // play() is called. Await it before starting the rAF so the first seeks
+    // don't race against a video that hasn't received any frames yet.
     const prime = async () => {
+      if (primed) return;
       try {
         await video.play();
         video.pause();
       } catch {
         /* play() can reject on some browsers — fall through */
       }
+      primed = true;
     };
 
-    const start = () => {
+    const start = async () => {
       if (running) return;
       running = true;
-      prime();
+      await prime();
+      lastT = performance.now();
       rafId = requestAnimationFrame(tick);
+    };
+
+    const stop = () => {
+      if (!running) return;
+      running = false;
+      cancelAnimationFrame(rafId);
     };
 
     // Mark ready only after a frame has actually been painted (first seeked
@@ -103,12 +121,28 @@ export default function ScrollScrubVideo({
     const onSeeked = () => setReady(true);
     video.addEventListener("seeked", onSeeked);
 
-    if (video.readyState >= 1) start();
-    else video.addEventListener("loadedmetadata", start, { once: true });
+    // IntersectionObserver gates the rAF — no idle CPU when off-screen.
+    // rootMargin pre-arms the scrub one viewport early so the first seek
+    // doesn't visibly jump when the section enters.
+    const io = new IntersectionObserver(
+      (entries) => {
+        onScreen = entries[0].isIntersecting;
+        if (onScreen) {
+          // HAVE_CURRENT_DATA (2) — enough to seek without exceptions
+          if (video.readyState >= 2) start();
+          else video.addEventListener("loadeddata", start, { once: true });
+        } else {
+          stop();
+        }
+      },
+      { rootMargin: "100% 0px" },
+    );
+    io.observe(section);
 
     return () => {
+      io.disconnect();
       cancelAnimationFrame(rafId);
-      video.removeEventListener("loadedmetadata", start);
+      video.removeEventListener("loadeddata", start);
       video.removeEventListener("seeked", onSeeked);
     };
   }, [reducedMotion]);

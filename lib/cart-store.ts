@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useState } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -52,3 +53,21 @@ export const useCart = create<CartState>()(
     { name: "volt-cart" },
   ),
 );
+
+/**
+ * Returns `true` only after Zustand has rehydrated from localStorage. Use this
+ * to gate any UI that depends on persisted cart state so SSR (empty cart) and
+ * post-hydration client (real cart) don't disagree.
+ */
+export function useCartHydrated() {
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    if (useCart.persist.hasHydrated()) {
+      setHydrated(true);
+      return;
+    }
+    const unsub = useCart.persist.onFinishHydration(() => setHydrated(true));
+    return () => unsub();
+  }, []);
+  return hydrated;
+}

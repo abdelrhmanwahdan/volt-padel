@@ -1,15 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
 import { mediaUrl } from "@/lib/utils";
+import { HOME_VIDEOS } from "@/lib/media";
 
-// All videos that appear above the chapter fold. We pre-warm the HTTP cache for
-// each so the scroll-scrub <video> elements get instant byte-range responses
-// when their section enters the viewport — no first-encounter stutter.
-const VIDEOS_TO_PRELOAD = [
-  "/videos/hero.mp4",
-  "/videos/charge.mp4",
-  "/videos/impact.mp4",
-];
+// We pre-warm the HTTP cache for every home-page video so the scroll-scrub
+// <video> elements get instant byte-range responses when their section enters
+// the viewport. Source of truth lives in lib/media.ts so new chapters can't
+// silently skip the preload step.
+const VIDEOS_TO_PRELOAD = HOME_VIDEOS;
 
 /**
  * Full-screen branded preloader.
@@ -101,11 +99,16 @@ export default function HeroLoader() {
       const totalTasks = 2 + VIDEO_COUNT; // poster + fonts + each video
       const doneCount =
         (posterLoaded ? 1 : 0) + (fontsLoaded ? 1 : 0) + videosReady;
-      // Task progress ramps to 0.95 as items complete
-      const taskTarget = 0.1 + (doneCount / totalTasks) * 0.85;
-      // Time progress keeps the bar visibly moving even when downloads stall
+      // Task progress climbs to 1.0 when every asset is ready
+      const taskTarget = 0.1 + (doneCount / totalTasks) * 0.9;
+      // Time-based component nudges the bar when downloads stall, but only
+      // floors at 0.92 if tasks aren't done yet — otherwise the bar would
+      // visually stick at 92% even after everything finished.
       const elapsed = Date.now() - startTime;
-      const timeTarget = Math.min(0.92, elapsed / MAX_DURATION);
+      const allDone = doneCount === totalTasks;
+      const timeTarget = allDone
+        ? taskTarget
+        : Math.min(0.92, elapsed / MAX_DURATION);
       const target = Math.max(taskTarget, timeTarget);
       displayed += (target - displayed) * 0.08;
       setProgress(displayed);
@@ -151,7 +154,6 @@ export default function HeroLoader() {
       <div
         className="relative font-[var(--font-display)] font-black text-fg select-none"
         style={{
-          fontFamily: "var(--font-display)",
           fontSize: "clamp(4rem, 14vw, 9rem)",
           letterSpacing: "-0.02em",
           lineHeight: 1,
@@ -178,13 +180,6 @@ export default function HeroLoader() {
       >
         CHARGING · {String(Math.round(progress * 100)).padStart(3, "0")}%
       </div>
-
-      <style jsx>{`
-        @keyframes voltpulse {
-          0%, 100% { transform: scale(1); }
-          50%      { transform: scale(1.08); }
-        }
-      `}</style>
     </div>
   );
 }

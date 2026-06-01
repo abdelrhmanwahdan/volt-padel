@@ -2,7 +2,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { PRODUCT } from "@/lib/product";
 
-export const metadata = { title: "Technology — How the Pro 3K is built" };
+export const metadata = {
+  title: "Technology — How the Pro 3K is built",
+  description:
+    "Inside the VÖLT Pro 3K: a five-layer composite — 3K carbon twill face, fiberglass diffusion layer, EVA honeycomb core, inner carbon mirror, and a cold-forged 6061 aluminum rim. Pressure-cured for 8 hours in Stockholm.",
+  openGraph: {
+    title: "VÖLT Technology — Five layers, one charged response",
+    description:
+      "How the Pro 3K transfers 14% more energy without ringing the wrist.",
+    images: ["/posters/hero.webp"],
+  },
+};
 
 const LAYERS = [
   {

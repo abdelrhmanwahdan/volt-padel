@@ -19,6 +19,7 @@ export default function AddToCart({ variant, qty }: { variant: Variant; qty: num
       variantHex: variant.hex,
       unitPrice: PRODUCT.price,
       qty,
+      image: "/product/racket_front.webp",
     });
     setAdded(true);
     if (goToCart) router.push("/cart");

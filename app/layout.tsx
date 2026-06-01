@@ -43,12 +43,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${heading.variable} ${body.variable} ${mono.variable}`}>
       <head>
-        <link
-          rel="preload"
-          as="image"
-          href="/hero/desktop/frame_0001.webp"
-          type="image/webp"
-        />
+        {/* Hero poster is preloaded globally because it's also the loader's
+            backdrop. Frame-sequence preloads are scoped to the home route via
+            app/page.tsx so non-home routes don't pay the bandwidth. */}
         <link rel="preload" as="image" href="/posters/hero.webp" type="image/webp" />
       </head>
       <body className="min-h-screen flex flex-col bg-bg text-fg antialiased">

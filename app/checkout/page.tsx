@@ -23,8 +23,9 @@ export default function CheckoutPage() {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    // Generate a mock order id and route to success — cart is cleared in success page.
-    const orderId = `VLT-${Date.now().toString(36).toUpperCase().slice(-6)}`;
+    // Mock order id — `crypto.randomUUID()` avoids the collision risk that
+    // shipping with `Date.now().toString(36)` would carry into a real backend.
+    const orderId = `VLT-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
     setTimeout(() => router.push(`/checkout/success?order=${orderId}`), 600);
   };
 
@@ -122,9 +123,10 @@ export default function CheckoutPage() {
               <li key={l.sku} className="flex gap-3 items-center">
                 <div className="w-14 h-14 relative rounded-lg overflow-hidden bg-bg border border-border shrink-0">
                   <Image
-                    src="/hero/desktop/frame_0074.webp"
+                    src={l.image ?? "/product/racket_front.webp"}
                     alt={`${l.name} thumbnail`}
                     fill
+                    loading="lazy"
                     className="object-contain p-1"
                     sizes="56px"
                   />

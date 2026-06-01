@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { Zap } from "lucide-react";
 
+// Evaluated once at module load (build time, since this file is imported by a
+// server component) — avoids re-creating a Date on every render.
+const COPYRIGHT_YEAR = new Date().getFullYear();
+
 const COLUMNS = [
   {
     title: "Product",
@@ -68,7 +72,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-16 pt-8 border-t border-border flex flex-col md:flex-row gap-4 items-start md:items-center justify-between text-xs text-fg-faint font-mono">
-          <p>© {new Date().getFullYear()} VÖLT Padel — All rights reserved.</p>
+          <p>© {COPYRIGHT_YEAR} VÖLT Padel — All rights reserved.</p>
           <p className="tracking-[0.3em] uppercase">Engineered in Stockholm · Tested in Marbella</p>
         </div>
       </div>
