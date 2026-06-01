@@ -68,12 +68,37 @@ export default function ScrollScrubVideo({
       const distance = Math.max(rect.height - winH, 1);
       const scrolled = -rect.top;
       const progress = Math.max(0, Math.min(1, scrolled / distance));
-      const target = progress * duration;
+      let target = progress * duration;
+
+      // Buffer-aware clamp — don't ask the player to seek past data that
+      // hasn't loaded yet. Without this, a fast scroll on a slow network
+      // sets currentTime to (say) 5s while only 2s is buffered; the player
+      // freezes silently at the last buffered frame and the user reaches
+      // the end of the section having seen only half the video. Clamping
+      // makes the scrub pause at the buffered edge and resume as bytes
+      // arrive — much smoother failure mode.
+      if (video.buffered.length > 0) {
+        let bufferedEnd = 0;
+        for (let i = 0; i < video.buffered.length; i++) {
+          if (
+            video.buffered.start(i) <= cur + 0.1 &&
+            video.buffered.end(i) > bufferedEnd
+          ) {
+            bufferedEnd = video.buffered.end(i);
+          }
+        }
+        if (bufferedEnd > 0) target = Math.min(target, bufferedEnd - 0.05);
+      }
+
       // Delta-time eased interpolation — same feel at 30/60/120Hz.
-      // 0.18 was tuned at 16.66ms/frame; scale it by actual frame delta.
+      // Catch-up rate accelerates when the playhead is far behind (e.g. a
+      // flick-scroll). Tuned base 0.18 at 16.66ms/frame; up to 0.45 when
+      // the gap exceeds half a second.
       const dt = Math.min(now - lastT, 50);
       lastT = now;
-      const k = 1 - Math.pow(1 - 0.18, dt / 16.66);
+      const gap = Math.abs(target - cur);
+      const baseK = gap > 0.5 ? 0.35 : 0.18;
+      const k = 1 - Math.pow(1 - baseK, dt / 16.66);
       cur += (target - cur) * k;
       const next = Math.round(cur * 1000) / 1000;
       if (Math.abs(next - lastSeek) > 0.008) {

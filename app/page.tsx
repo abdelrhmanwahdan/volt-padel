@@ -51,6 +51,16 @@ export default function Home() {
         href="/hero/desktop/frame_0001.webp"
         type="image/webp"
       />
+      {/* Hero video — start the byte fetch during HTML parse so the scroll-scrub
+          has data buffered by the time the user starts scrolling. Without this
+          the fetch only kicks off when the <video> mounts post-hydration,
+          which leaves a ~1s window where the scrub stalls on slow networks. */}
+      <link
+        rel="preload"
+        as="video"
+        href={mediaUrl("/videos/hero.mp4")}
+        type="video/mp4"
+      />
 
       {/* CHAPTER 1 — HERO (electric strike, plays once) */}
       <HeroVideo
