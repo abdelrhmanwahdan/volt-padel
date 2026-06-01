@@ -5,18 +5,25 @@ import { mediaUrl } from "@/lib/utils";
 /**
  * Full-screen branded preloader.
  *
- * Waits for fonts + hero poster + hero-video metadata before dismissing.
- * That's the only thing visible above the fold — chapter videos are gated
- * by ScrollScrubVideo's IntersectionObserver (rootMargin: "100% 0px") so
- * they pre-arm one viewport early without needing to be preloaded here.
+ * Waits for fonts + hero poster + hero-video bytes (via fetch) before
+ * dismissing. The fetch downloads the full hero.mp4 into the HTTP cache —
+ * the real <video> element's subsequent Range requests are then served
+ * from cache with no network round-trip, so the scroll-scrub has a full
+ * buffer the moment the user starts scrolling.
  *
- * Earlier versions preloaded all chapter videos via off-DOM <video> elements,
- * but the Range requests from the preload didn't share cache with the real
- * <video> Range requests on jsDelivr — every video was downloaded twice
- * (~70MB wasted) and the loader sat for 20s waiting on canplaythrough.
+ * Why fetch() instead of preload="auto" / preload="metadata"? Earlier
+ * attempts used off-DOM <video> elements; their Range requests didn't
+ * dedupe with the real <video>'s Range requests on jsDelivr, so every
+ * video was downloaded twice. A plain fetch() returns a single full 200
+ * response that the browser's HTTP cache then serves to subsequent Range
+ * requests — one download, perfectly reusable.
+ *
+ * Chapter videos are NOT preloaded here. They're gated by
+ * ScrollScrubVideo's IntersectionObserver (rootMargin: "100% 0px") so
+ * they pre-arm one viewport early.
  *
  * Soft min: 1.2s (don't flash by — give the brand impression a beat).
- * Hard cap: 5s.
+ * Hard cap: 12s (on a 10 Mbps connection, 11.6 MB hero takes ~10s).
  * Shown once per session via sessionStorage; repeat visits skip it.
  */
 export default function HeroLoader() {
@@ -36,15 +43,17 @@ export default function HeroLoader() {
     if (skip) return;
 
     const MIN_DURATION = 1200;
-    const MAX_DURATION = 5000;
+    const MAX_DURATION = 12000;
     const startTime = Date.now();
 
     let posterLoaded = false;
     let fontsLoaded = false;
-    let heroMetaLoaded = false;
+    let heroBytesLoaded = false;
     let displayed = 0;
     let raf = 0;
     let finished = false;
+    let aborted = false;
+    const abortCtl = new AbortController();
 
     // Fonts
     if (typeof document !== "undefined" && document.fonts?.ready) {
@@ -65,20 +74,19 @@ export default function HeroLoader() {
     };
     poster.src = "/posters/hero.webp";
 
-    // Hero video metadata only — enough to know the file exists and the
-    // hero section can render without poster-flash. We deliberately do NOT
-    // wait for canplaythrough (that ends up downloading the entire file,
-    // and the real <video> element will issue its own Range request anyway).
-    const heroVid = document.createElement("video");
-    heroVid.preload = "metadata";
-    heroVid.muted = true;
-    heroVid.playsInline = true;
-    const onMeta = () => {
-      heroMetaLoaded = true;
-    };
-    heroVid.addEventListener("loadedmetadata", onMeta, { once: true });
-    heroVid.addEventListener("error", onMeta, { once: true });
-    heroVid.src = mediaUrl("/videos/hero.mp4");
+    // Hero video bytes — full file via fetch(). The browser caches the 200
+    // response and serves the real <video> element's later Range requests
+    // straight from cache, no network round-trip. By the time the loader
+    // dismisses, the entire scroll-scrub timeline is reachable instantly.
+    fetch(mediaUrl("/videos/hero.mp4"), { signal: abortCtl.signal })
+      .then((r) => r.blob())
+      .then(() => {
+        if (!aborted) heroBytesLoaded = true;
+      })
+      .catch(() => {
+        // Network error or aborted — don't block the loader forever.
+        if (!aborted) heroBytesLoaded = true;
+      });
 
     const finish = () => {
       if (finished) return;
@@ -92,9 +100,9 @@ export default function HeroLoader() {
     };
 
     const tick = () => {
-      const totalTasks = 3; // poster + fonts + hero meta
+      const totalTasks = 3; // poster + fonts + hero bytes
       const doneCount =
-        (posterLoaded ? 1 : 0) + (fontsLoaded ? 1 : 0) + (heroMetaLoaded ? 1 : 0);
+        (posterLoaded ? 1 : 0) + (fontsLoaded ? 1 : 0) + (heroBytesLoaded ? 1 : 0);
       const taskTarget = 0.1 + (doneCount / totalTasks) * 0.9;
       const elapsed = Date.now() - startTime;
       const allDone = doneCount === totalTasks;
@@ -113,10 +121,9 @@ export default function HeroLoader() {
     raf = requestAnimationFrame(tick);
 
     return () => {
+      aborted = true;
+      abortCtl.abort();
       cancelAnimationFrame(raf);
-      heroVid.removeEventListener("loadedmetadata", onMeta);
-      heroVid.removeEventListener("error", onMeta);
-      heroVid.src = "";
     };
   }, [skip]);
 

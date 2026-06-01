@@ -44,22 +44,14 @@ export default function Home() {
   return (
     <>
       {/* Route-scoped preload — only the home page uses the scroll-canvas frames.
-          React 19 hoists <link> elements out of JSX into <head>. */}
+          React 19 hoists <link> elements out of JSX into <head>. The hero video
+          is preloaded by HeroLoader (full file via fetch) so the scroll-scrub
+          can start with a warm HTTP cache. */}
       <link
         rel="preload"
         as="image"
         href="/hero/desktop/frame_0001.webp"
         type="image/webp"
-      />
-      {/* Hero video — start the byte fetch during HTML parse so the scroll-scrub
-          has data buffered by the time the user starts scrolling. Without this
-          the fetch only kicks off when the <video> mounts post-hydration,
-          which leaves a ~1s window where the scrub stalls on slow networks. */}
-      <link
-        rel="preload"
-        as="video"
-        href={mediaUrl("/videos/hero.mp4")}
-        type="video/mp4"
       />
 
       {/* CHAPTER 1 — HERO (electric strike, plays once) */}
