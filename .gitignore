@@ -21,3 +21,4 @@ next-env.d.ts
 /.upscale.log
 /.upscale_work/
 .upscale_videos.log
+.claude/
