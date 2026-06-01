@@ -50,14 +50,37 @@ export default function ScrollScrubVideo({
     if (!section || !video) return;
 
     let rafId = 0;
-    let cur = 0;
-    let lastSeek = -1;
-    let lastT = performance.now();
+    let pendingTarget = 0;
+    let seekInFlight = false;
     let running = false;
     let onScreen = false;
     let primed = false;
 
-    const tick = (now: number) => {
+    // Serialize seeks — only one in flight at a time. Issuing currentTime
+    // updates faster than the decoder can paint them (which is what a 60Hz
+    // rAF does on a QHD video) just drops frames and leaves the playhead
+    // visibly behind scroll position. Instead: set currentTime once, wait
+    // for the seeked event, then set it again to the latest scroll target.
+    // This caps seek rate at ~decoder-throughput Hz and keeps the painted
+    // frame in sync with where the user is.
+    const issueNext = () => {
+      if (seekInFlight || !running) return;
+      const cur = video.currentTime;
+      if (Math.abs(pendingTarget - cur) < 0.008) return;
+      seekInFlight = true;
+      try {
+        video.currentTime = pendingTarget;
+      } catch {
+        seekInFlight = false;
+      }
+    };
+
+    const onSeekDone = () => {
+      seekInFlight = false;
+      issueNext();
+    };
+
+    const tick = () => {
       const duration = video.duration;
       if (!duration || Number.isNaN(duration)) {
         rafId = requestAnimationFrame(tick);
@@ -68,27 +91,8 @@ export default function ScrollScrubVideo({
       const distance = Math.max(rect.height - winH, 1);
       const scrolled = -rect.top;
       const progress = Math.max(0, Math.min(1, scrolled / distance));
-      const target = progress * duration;
-
-      // Delta-time eased interpolation — same feel at 30/60/120Hz.
-      // Catch-up rate accelerates when the playhead is far behind (e.g. a
-      // flick-scroll). Tuned base 0.18 at 16.66ms/frame; up to 0.45 when
-      // the gap exceeds half a second.
-      const dt = Math.min(now - lastT, 50);
-      lastT = now;
-      const gap = Math.abs(target - cur);
-      const baseK = gap > 0.5 ? 0.35 : 0.18;
-      const k = 1 - Math.pow(1 - baseK, dt / 16.66);
-      cur += (target - cur) * k;
-      const next = Math.round(cur * 1000) / 1000;
-      if (Math.abs(next - lastSeek) > 0.008) {
-        try {
-          video.currentTime = next;
-          lastSeek = next;
-        } catch {
-          /* seek before metadata loaded — ignore */
-        }
-      }
+      pendingTarget = progress * duration;
+      issueNext();
       rafId = requestAnimationFrame(tick);
     };
 
@@ -110,7 +114,6 @@ export default function ScrollScrubVideo({
       if (running) return;
       running = true;
       await prime();
-      lastT = performance.now();
       rafId = requestAnimationFrame(tick);
     };
 
@@ -122,8 +125,13 @@ export default function ScrollScrubVideo({
 
     // Mark ready only after a frame has actually been painted (first seeked
     // event), so the poster fallback stays visible until the video can show
-    // real frames. Prevents the iOS-Safari black-screen flash.
-    const onSeeked = () => setReady(true);
+    // real frames. Prevents the iOS-Safari black-screen flash. The same
+    // seeked event also clears our serialize-seeks gate so the next target
+    // can be issued.
+    const onSeeked = () => {
+      setReady(true);
+      onSeekDone();
+    };
     video.addEventListener("seeked", onSeeked);
 
     // IntersectionObserver gates the rAF — no idle CPU when off-screen.
