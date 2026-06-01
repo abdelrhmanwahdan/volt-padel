@@ -43,6 +43,23 @@ export default function ScrollScrubVideo({
     return () => mq.removeEventListener("change", handler);
   }, []);
 
+  // Warm the HTTP cache with the full video bytes on mount. The browser's
+  // cache then serves the <video> element's Range requests with no network
+  // round-trip, so the scroll-scrub has a fully buffered file the moment
+  // the user reaches this section — same trick HeroLoader uses for the
+  // hero video, applied per-component for every chapter. If HeroLoader
+  // (or another component) already cached this URL, the fetch hits the
+  // cache and is effectively free.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const ctl = new AbortController();
+    fetch(src, { signal: ctl.signal }).catch(() => {
+      /* network error or aborted — fine, the <video> element will just
+         fall back to its normal Range-request loading path */
+    });
+    return () => ctl.abort();
+  }, [src]);
+
   useEffect(() => {
     if (reducedMotion) return;
     const section = sectionRef.current;
