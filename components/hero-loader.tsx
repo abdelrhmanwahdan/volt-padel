@@ -2,40 +2,54 @@
 import { useEffect, useState } from "react";
 import { mediaUrl } from "@/lib/utils";
 
+// All videos that appear above the chapter fold. We pre-warm the HTTP cache for
+// each so the scroll-scrub <video> elements get instant byte-range responses
+// when their section enters the viewport — no first-encounter stutter.
+const VIDEOS_TO_PRELOAD = [
+  "/videos/hero.mp4",
+  "/videos/charge.mp4",
+  "/videos/impact.mp4",
+];
+
 /**
  * Full-screen branded preloader.
- * Waits for fonts + hero poster + hero video metadata before dismissing.
- * Hard cap: 5s (don't make users wait if jsDelivr is slow).
+ * - Renders during SSR so it covers the page from the very first paint
+ *   (no flash of un-loaded home page).
+ * - Waits for fonts + hero poster + `canplaythrough` on every home-page video
+ *   before dismissing — eliminates the scroll-into-chapter lag.
+ * Hard cap: 12s (don't punish slow networks indefinitely).
  * Soft min: 1.2s (don't flash by — give the brand impression a beat).
- * Shows once per session (sessionStorage flag).
+ * Shown once per session via sessionStorage; repeat visits skip it.
  */
 export default function HeroLoader() {
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
-  const [skip, setSkip] = useState(true);
+  // Default: render the loader. We accept a sub-frame flash for repeat
+  // visitors (sessionStorage skip runs in useEffect) to avoid the much worse
+  // flash-of-homepage every first-time visitor was getting.
+  const [skip, setSkip] = useState(false);
 
-  // Decide on mount whether to render at all
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const seen = sessionStorage.getItem("volt-loaded");
-    if (!seen) setSkip(false);
+    if (sessionStorage.getItem("volt-loaded")) setSkip(true);
   }, []);
 
   useEffect(() => {
     if (skip) return;
 
     const MIN_DURATION = 1200;
-    const MAX_DURATION = 5000;
+    const MAX_DURATION = 12000;
     const startTime = Date.now();
 
     let posterLoaded = false;
-    let videoMetaLoaded = false;
     let fontsLoaded = false;
+    let videosReady = 0;
+    const VIDEO_COUNT = VIDEOS_TO_PRELOAD.length;
     let displayed = 0;
     let raf = 0;
     let finished = false;
 
-    // Track fonts
+    // Fonts
     if (typeof document !== "undefined" && document.fonts?.ready) {
       document.fonts.ready.then(() => {
         fontsLoaded = true;
@@ -44,7 +58,7 @@ export default function HeroLoader() {
       fontsLoaded = true;
     }
 
-    // Track poster
+    // Poster
     const poster = new Image();
     poster.onload = () => {
       posterLoaded = true;
@@ -54,22 +68,27 @@ export default function HeroLoader() {
     };
     poster.src = "/posters/hero.webp";
 
-    // Track hero video metadata
-    const vid = document.createElement("video");
-    vid.preload = "metadata";
-    vid.muted = true;
-    vid.playsInline = true;
-    const onMeta = () => {
-      videoMetaLoaded = true;
-    };
-    vid.addEventListener("loadedmetadata", onMeta);
-    vid.addEventListener("error", onMeta);
-    vid.src = mediaUrl("/videos/hero.mp4");
+    // Videos — preload each into HTTP cache. `canplaythrough` fires when the
+    // browser estimates enough is buffered to play through; for scroll-scrub
+    // it's the closest standard signal to "the file is downloaded".
+    const videoEls: HTMLVideoElement[] = [];
+    VIDEOS_TO_PRELOAD.forEach((path) => {
+      const v = document.createElement("video");
+      v.preload = "auto";
+      v.muted = true;
+      v.playsInline = true;
+      const onReady = () => {
+        videosReady++;
+      };
+      v.addEventListener("canplaythrough", onReady, { once: true });
+      v.addEventListener("error", onReady, { once: true });
+      v.src = mediaUrl(path);
+      videoEls.push(v);
+    });
 
     const finish = () => {
       if (finished) return;
       finished = true;
-      // Snap to 100% then fade out
       displayed = 1;
       setProgress(1);
       setTimeout(() => setDone(true), 250);
@@ -79,19 +98,20 @@ export default function HeroLoader() {
     };
 
     const tick = () => {
-      const done3 = [posterLoaded, videoMetaLoaded, fontsLoaded].filter(Boolean).length;
-      // Target ramps to 0.9 based on tasks complete, holds there until min duration
-      const taskTarget = 0.15 + (done3 / 3) * 0.75;
-      // Add a small time-based component so the bar visibly progresses
+      const totalTasks = 2 + VIDEO_COUNT; // poster + fonts + each video
+      const doneCount =
+        (posterLoaded ? 1 : 0) + (fontsLoaded ? 1 : 0) + videosReady;
+      // Task progress ramps to 0.95 as items complete
+      const taskTarget = 0.1 + (doneCount / totalTasks) * 0.85;
+      // Time progress keeps the bar visibly moving even when downloads stall
       const elapsed = Date.now() - startTime;
       const timeTarget = Math.min(0.92, elapsed / MAX_DURATION);
       const target = Math.max(taskTarget, timeTarget);
-      // Smooth toward target
       displayed += (target - displayed) * 0.08;
       setProgress(displayed);
 
       if (elapsed > MAX_DURATION) return finish();
-      if (done3 === 3 && elapsed > MIN_DURATION) return finish();
+      if (doneCount === totalTasks && elapsed > MIN_DURATION) return finish();
       raf = requestAnimationFrame(tick);
     };
 
@@ -99,9 +119,9 @@ export default function HeroLoader() {
 
     return () => {
       cancelAnimationFrame(raf);
-      vid.removeEventListener("loadedmetadata", onMeta);
-      vid.removeEventListener("error", onMeta);
-      vid.src = "";
+      videoEls.forEach((v) => {
+        v.src = "";
+      });
     };
   }, [skip]);
 
