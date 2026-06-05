@@ -90,6 +90,8 @@ export default function Home() {
         align="bottom-left"
         scrollHeight={300}
         vignette={0.55}
+        mobileFramesDir="/scrub/charge"
+        mobileFramesCount={96}
       />
 
       {/* CHAPTER 5 — IMPACT (vid4 trimmed to 3s ball-departure, scroll-scrubbed) */}
@@ -102,6 +104,8 @@ export default function Home() {
         align="bottom-right"
         scrollHeight={220}
         vignette={0.5}
+        mobileFramesDir="/scrub/impact"
+        mobileFramesCount={42}
       />
 
       {/* CHAPTER 6 — SPECS STRIP */}

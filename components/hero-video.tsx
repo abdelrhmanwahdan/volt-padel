@@ -21,6 +21,8 @@ export default function HeroVideo({
       alt={`${productName} racket — electric strike reveal`}
       scrollHeight={250}
       className={className}
+      mobileFramesDir="/scrub/hero"
+      mobileFramesCount={96}
     >
       {/* Vignette */}
       <div
