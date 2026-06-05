@@ -38,7 +38,7 @@ export default function HeroVideo({
       <div className="absolute inset-0 flex pointer-events-none">
         <div
           className="self-end w-full max-w-[1400px] mx-auto px-6 lg:px-10 md:pb-24"
-          style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
+          style={{ paddingBottom: "calc(8rem + env(safe-area-inset-bottom))" }}
         >
           <div className="max-w-[18ch]">
             <p className="hidden md:block text-eyebrow mb-5 text-fg-muted">{tagline}</p>

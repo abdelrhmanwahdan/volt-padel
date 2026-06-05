@@ -36,10 +36,10 @@ export default function ChapterVideo({
   // title clears the 64px tab bar + iPhone home-indicator gutter.
   const alignClasses =
     align === "center"
-      ? "items-center justify-center text-center pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-0"
+      ? "items-center justify-center text-center pb-[calc(8rem+env(safe-area-inset-bottom))] sm:pb-0"
       : align === "bottom-right"
-        ? "items-end justify-end text-right pb-[calc(6rem+env(safe-area-inset-bottom))] pr-6 sm:pb-24 sm:pr-10 lg:pb-32 lg:pr-20"
-        : "items-start justify-end text-left pb-[calc(6rem+env(safe-area-inset-bottom))] pl-6 sm:pb-24 sm:pl-10 lg:pb-32 lg:pl-20";
+        ? "items-end justify-end text-right pb-[calc(8rem+env(safe-area-inset-bottom))] pr-6 sm:pb-24 sm:pr-10 lg:pb-32 lg:pr-20"
+        : "items-start justify-end text-left pb-[calc(8rem+env(safe-area-inset-bottom))] pl-6 sm:pb-24 sm:pl-10 lg:pb-32 lg:pl-20";
 
   const sideGradientDir =
     align === "bottom-right" ? "to left" : align === "center" ? "to top" : "to right";
