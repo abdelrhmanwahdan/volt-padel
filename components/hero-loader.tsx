@@ -1,37 +1,34 @@
 "use client";
 import { useEffect, useState } from "react";
-import { mediaUrl } from "@/lib/utils";
 
 /**
  * Full-screen branded preloader.
  *
- * Waits for fonts + hero poster + hero-video bytes (via fetch) before
- * dismissing. The fetch downloads the full hero.mp4 into the HTTP cache —
- * the real <video> element's subsequent Range requests are then served
- * from cache with no network round-trip, so the scroll-scrub has a full
- * buffer the moment the user starts scrolling.
+ * Waits for ALL of:
+ *   - Fonts loaded (`document.fonts.ready`)
+ *   - Hero poster decoded
+ *   - First 12 hero scrub frames loaded (≈1s of scrub coverage from frame 0)
+ *   - `window.load` event (every <link>, <script>, above-fold image done)
  *
- * Why fetch() instead of preload="auto" / preload="metadata"? Earlier
- * attempts used off-DOM <video> elements; their Range requests didn't
- * dedupe with the real <video>'s Range requests on jsDelivr, so every
- * video was downloaded twice. A plain fetch() returns a single full 200
- * response that the browser's HTTP cache then serves to subsequent Range
- * requests — one download, perfectly reusable.
- *
- * Chapter videos are NOT preloaded here. They're gated by
- * ScrollScrubVideo's IntersectionObserver (rootMargin: "100% 0px") so
- * they pre-arm one viewport early.
+ * The 12 critical frames give the scrub a head start the moment the user
+ * begins scrolling. The remaining frames (13–96) idle-load via the
+ * ScrollScrubVideo component's IntersectionObserver — they trickle in while
+ * the user reads the hero, and findNearest() in ScrollScrubVideo falls back
+ * to the closest loaded frame if scroll outruns the download.
  *
  * Soft min: 1.2s (don't flash by — give the brand impression a beat).
- * Hard cap: 12s (on a 10 Mbps connection, 11.6 MB hero takes ~10s).
- * Shown once per session via sessionStorage; repeat visits skip it.
+ * Hard cap: 12s (slow 3G must not lock the user out forever).
+ * Shown once per session via sessionStorage.
  */
+
+const HERO_FRAMES_DIR = "/scrub/hero";
+const HERO_CRITICAL_FRAMES = 12;
+const heroFrameUrl = (i: number) =>
+  `${HERO_FRAMES_DIR}/${i.toString().padStart(4, "0")}.webp`;
+
 export default function HeroLoader() {
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
-  // Default: render the loader. Repeat visitors get a sub-frame flash before
-  // useEffect dismisses — acceptable trade-off versus the flash-of-homepage
-  // every first-time visitor used to see.
   const [skip, setSkip] = useState(false);
 
   useEffect(() => {
@@ -48,15 +45,14 @@ export default function HeroLoader() {
 
     let posterLoaded = false;
     let fontsLoaded = false;
-    let heroBytesLoaded = false;
+    let framesLoadedCount = 0;
+    let windowLoaded = false;
     let displayed = 0;
     let raf = 0;
     let finished = false;
-    let aborted = false;
-    const abortCtl = new AbortController();
 
     // Fonts
-    if (typeof document !== "undefined" && document.fonts?.ready) {
+    if (document.fonts?.ready) {
       document.fonts.ready.then(() => {
         fontsLoaded = true;
       });
@@ -66,27 +62,38 @@ export default function HeroLoader() {
 
     // Poster
     const poster = new Image();
-    poster.onload = () => {
+    const markPoster = () => {
       posterLoaded = true;
     };
-    poster.onerror = () => {
-      posterLoaded = true;
-    };
+    poster.addEventListener("load", markPoster, { once: true });
+    poster.addEventListener("error", markPoster, { once: true });
     poster.src = "/posters/hero.webp";
 
-    // Hero video bytes — full file via fetch(). The browser caches the 200
-    // response and serves the real <video> element's later Range requests
-    // straight from cache, no network round-trip. By the time the loader
-    // dismisses, the entire scroll-scrub timeline is reachable instantly.
-    fetch(mediaUrl("/videos/hero.mp4"), { signal: abortCtl.signal })
-      .then((r) => r.blob())
-      .then(() => {
-        if (!aborted) heroBytesLoaded = true;
-      })
-      .catch(() => {
-        // Network error or aborted — don't block the loader forever.
-        if (!aborted) heroBytesLoaded = true;
-      });
+    // Critical hero frames — fetch in parallel via <img>. The browser caches
+    // each frame; ScrollScrubVideo's <img> elements then hit the cache.
+    const frameImgs = Array.from({ length: HERO_CRITICAL_FRAMES }, (_, i) => {
+      const img = new Image();
+      const mark = () => {
+        framesLoadedCount++;
+      };
+      img.addEventListener("load", mark, { once: true });
+      img.addEventListener("error", mark, { once: true });
+      img.src = heroFrameUrl(i + 1);
+      return img;
+    });
+
+    // Window load — fires after every <link>, <script>, above-fold <img>.
+    if (document.readyState === "complete") {
+      windowLoaded = true;
+    } else {
+      window.addEventListener(
+        "load",
+        () => {
+          windowLoaded = true;
+        },
+        { once: true },
+      );
+    }
 
     const finish = () => {
       if (finished) return;
@@ -100,12 +107,21 @@ export default function HeroLoader() {
     };
 
     const tick = () => {
-      const totalTasks = 3; // poster + fonts + hero bytes
-      const doneCount =
-        (posterLoaded ? 1 : 0) + (fontsLoaded ? 1 : 0) + (heroBytesLoaded ? 1 : 0);
-      const taskTarget = 0.1 + (doneCount / totalTasks) * 0.9;
+      // 4 weighted task groups: poster, fonts, critical frames, window-load
+      const framesProgress = framesLoadedCount / HERO_CRITICAL_FRAMES;
+      const taskProgress =
+        (Number(posterLoaded) +
+          Number(fontsLoaded) +
+          framesProgress +
+          Number(windowLoaded)) /
+        4;
+      const taskTarget = 0.1 + taskProgress * 0.9;
       const elapsed = Date.now() - startTime;
-      const allDone = doneCount === totalTasks;
+      const allDone =
+        posterLoaded &&
+        fontsLoaded &&
+        framesLoadedCount >= HERO_CRITICAL_FRAMES &&
+        windowLoaded;
       const timeTarget = allDone
         ? taskTarget
         : Math.min(0.92, elapsed / MAX_DURATION);
@@ -121,9 +137,12 @@ export default function HeroLoader() {
     raf = requestAnimationFrame(tick);
 
     return () => {
-      aborted = true;
-      abortCtl.abort();
       cancelAnimationFrame(raf);
+      // Cancel pending image loads so we don't leak when navigation happens
+      // mid-load — clearing src is the cross-browser way to abort an Image
+      // download.
+      poster.src = "";
+      for (const img of frameImgs) img.src = "";
     };
   }, [skip]);
 
@@ -137,7 +156,6 @@ export default function HeroLoader() {
       }`}
       style={{ visibility: done && progress === 1 ? "hidden" : "visible" }}
     >
-      {/* Pulsing accent glow — sits behind the wordmark */}
       <div
         className="absolute w-[40vw] h-[40vw] max-w-[420px] max-h-[420px] rounded-full pointer-events-none"
         style={{
@@ -149,7 +167,6 @@ export default function HeroLoader() {
         }}
       />
 
-      {/* Wordmark — same font as the hero */}
       <div
         className="relative font-[var(--font-display)] font-black text-fg select-none"
         style={{
@@ -161,7 +178,6 @@ export default function HeroLoader() {
         VÖLT
       </div>
 
-      {/* Progress bar */}
       <div className="mt-10 w-44 sm:w-56 h-[2px] bg-border overflow-hidden rounded-full">
         <div
           className="h-full bg-accent origin-left will-change-transform"
@@ -172,7 +188,6 @@ export default function HeroLoader() {
         />
       </div>
 
-      {/* Label */}
       <div
         className="mt-4 text-[10px] font-mono tracking-[0.18em] text-fg-muted tabular-nums"
         style={{ fontFamily: "var(--font-numeric)" }}

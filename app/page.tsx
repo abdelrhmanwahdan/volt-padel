@@ -4,7 +4,7 @@ import ScrollCanvas from "@/components/scroll-canvas";
 import ChapterVideo from "@/components/chapter-video";
 import SpecsStrip from "@/components/specs-strip";
 import { PRODUCT } from "@/lib/product";
-import { formatPrice, mediaUrl } from "@/lib/utils";
+import { formatPrice } from "@/lib/utils";
 import { ArrowRight } from "lucide-react";
 
 import type { ScrollChapter } from "@/components/scroll-canvas";
@@ -56,7 +56,6 @@ export default function Home() {
 
       {/* CHAPTER 1 — HERO (electric strike, plays once) */}
       <HeroVideo
-        src={mediaUrl("/videos/hero.mp4")}
         poster="/posters/hero.webp"
         productName="VÖLT"
         tagline="Charged · Pro 3K · 2026"
@@ -80,9 +79,10 @@ export default function Home() {
       {/* CHAPTER 3 — SCROLL TURNTABLE (vid2 → 148 transparent webp frames) */}
       <ScrollCanvas chapters={CHAPTERS} />
 
-      {/* CHAPTER 4 — CHARGE (vid3, scroll-scrubbed) */}
+      {/* CHAPTER 4 — CHARGE (scroll-scrubbed canvas) */}
       <ChapterVideo
-        src={mediaUrl("/videos/charge.mp4")}
+        framesDir="/scrub/charge"
+        framesCount={96}
         poster="/posters/charge.webp"
         eyebrow="Engineered · Charged"
         title="It wakes up the moment you do."
@@ -90,13 +90,12 @@ export default function Home() {
         align="bottom-left"
         scrollHeight={300}
         vignette={0.55}
-        mobileFramesDir="/scrub/charge"
-        mobileFramesCount={96}
       />
 
-      {/* CHAPTER 5 — IMPACT (vid4 trimmed to 3s ball-departure, scroll-scrubbed) */}
+      {/* CHAPTER 5 — IMPACT (scroll-scrubbed canvas) */}
       <ChapterVideo
-        src={mediaUrl("/videos/impact.mp4")}
+        framesDir="/scrub/impact"
+        framesCount={42}
         poster="/posters/impact.webp"
         eyebrow="Impact · Sweet Spot"
         title="The strike that sounds right."
@@ -104,8 +103,6 @@ export default function Home() {
         align="bottom-right"
         scrollHeight={220}
         vignette={0.5}
-        mobileFramesDir="/scrub/impact"
-        mobileFramesCount={42}
       />
 
       {/* CHAPTER 6 — SPECS STRIP */}

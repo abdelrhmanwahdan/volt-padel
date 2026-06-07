@@ -1,7 +1,8 @@
 import ScrollScrubVideo from "./scroll-scrub-video";
 
 type Props = {
-  src: string;
+  framesDir: string;
+  framesCount: number;
   poster?: string;
   eyebrow: string;
   title: string;
@@ -12,13 +13,11 @@ type Props = {
   scrollHeight?: number;
   /** Subtle dark overlay over the video for text legibility (0..1) */
   vignette?: number;
-  /** Mobile scroll-scrub image sequence (see ScrollScrubVideo). */
-  mobileFramesDir?: string;
-  mobileFramesCount?: number;
 };
 
 export default function ChapterVideo({
-  src,
+  framesDir,
+  framesCount,
   poster,
   eyebrow,
   title,
@@ -26,8 +25,6 @@ export default function ChapterVideo({
   align = "bottom-left",
   scrollHeight = 250,
   vignette = 0.45,
-  mobileFramesDir,
-  mobileFramesCount,
 }: Props) {
   // flex-col means items-* is horizontal (cross-axis) and justify-* is vertical (main-axis).
   // bottom-left  = items-start (left)  + justify-end (bottom)
@@ -46,12 +43,11 @@ export default function ChapterVideo({
 
   return (
     <ScrollScrubVideo
-      src={src}
+      framesDir={framesDir}
+      framesCount={framesCount}
       poster={poster}
       alt={title}
       scrollHeight={scrollHeight}
-      mobileFramesDir={mobileFramesDir}
-      mobileFramesCount={mobileFramesCount}
     >
       {/* Side gradient for text legibility */}
       <div

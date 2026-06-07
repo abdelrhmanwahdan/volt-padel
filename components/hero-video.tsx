@@ -2,13 +2,11 @@ import { ArrowDown } from "lucide-react";
 import ScrollScrubVideo from "./scroll-scrub-video";
 
 export default function HeroVideo({
-  src,
   poster,
   productName,
   tagline,
   className = "",
 }: {
-  src: string;
   poster?: string;
   productName: string;
   tagline: string;
@@ -16,13 +14,12 @@ export default function HeroVideo({
 }) {
   return (
     <ScrollScrubVideo
-      src={src}
+      framesDir="/scrub/hero"
+      framesCount={96}
       poster={poster}
       alt={`${productName} racket — electric strike reveal`}
       scrollHeight={250}
       className={className}
-      mobileFramesDir="/scrub/hero"
-      mobileFramesCount={96}
     >
       {/* Vignette */}
       <div
