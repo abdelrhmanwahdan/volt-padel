@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { SCRUB_SECTIONS, TOTAL_SCRUB_FRAMES } from "@/lib/scrub-sections";
 
 /**
  * Full-screen branded preloader.
@@ -7,24 +8,23 @@ import { useEffect, useState } from "react";
  * Waits for ALL of:
  *   - Fonts loaded (`document.fonts.ready`)
  *   - Hero poster decoded
- *   - First 12 hero scrub frames loaded (≈1s of scrub coverage from frame 0)
+ *   - EVERY scroll-scrub frame loaded (hero + charge + impact, 234 frames,
+ *     ~9.2 MB) — so by the time the loader dismisses, every chapter's
+ *     scrub is already in the HTTP cache and runs without stutter even on
+ *     a slow connection.
  *   - `window.load` event (every <link>, <script>, above-fold image done)
  *
- * The 12 critical frames give the scrub a head start the moment the user
- * begins scrolling. The remaining frames (13–96) idle-load via the
- * ScrollScrubVideo component's IntersectionObserver — they trickle in while
- * the user reads the hero, and findNearest() in ScrollScrubVideo falls back
- * to the closest loaded frame if scroll outruns the download.
+ * MAX_DURATION is 30s rather than the earlier 12s because the 9.2 MB
+ * frame payload takes ~15s on a 5 Mbps connection and ~50s on slow 3G;
+ * 30s is a hard ceiling that prevents lockout on terrible networks while
+ * giving normal connections plenty of time to finish.
  *
- * Soft min: 1.2s (don't flash by — give the brand impression a beat).
- * Hard cap: 12s (slow 3G must not lock the user out forever).
+ * Soft min: 1.2s (don't flash by).
  * Shown once per session via sessionStorage.
  */
 
-const HERO_FRAMES_DIR = "/scrub/hero";
-const HERO_CRITICAL_FRAMES = 12;
-const heroFrameUrl = (i: number) =>
-  `${HERO_FRAMES_DIR}/${i.toString().padStart(4, "0")}.webp`;
+const frameUrl = (dir: string, i: number) =>
+  `${dir}/${i.toString().padStart(4, "0")}.webp`;
 
 export default function HeroLoader() {
   const [progress, setProgress] = useState(0);
@@ -40,7 +40,7 @@ export default function HeroLoader() {
     if (skip) return;
 
     const MIN_DURATION = 1200;
-    const MAX_DURATION = 12000;
+    const MAX_DURATION = 30000;
     const startTime = Date.now();
 
     let posterLoaded = false;
@@ -69,18 +69,23 @@ export default function HeroLoader() {
     poster.addEventListener("error", markPoster, { once: true });
     poster.src = "/posters/hero.webp";
 
-    // Critical hero frames — fetch in parallel via <img>. The browser caches
-    // each frame; ScrollScrubVideo's <img> elements then hit the cache.
-    const frameImgs = Array.from({ length: HERO_CRITICAL_FRAMES }, (_, i) => {
-      const img = new Image();
-      const mark = () => {
-        framesLoadedCount++;
-      };
-      img.addEventListener("load", mark, { once: true });
-      img.addEventListener("error", mark, { once: true });
-      img.src = heroFrameUrl(i + 1);
-      return img;
-    });
+    // Every frame from every scrub section, in parallel via <img>. Each
+    // request lands in the HTTP cache; ScrollScrubVideo's own <img>
+    // elements then hit the cache. By design the loader does NOT dismiss
+    // until every frame is reachable from cache.
+    const frameImgs: HTMLImageElement[] = [];
+    for (const section of SCRUB_SECTIONS) {
+      for (let i = 1; i <= section.framesCount; i++) {
+        const img = new Image();
+        const mark = () => {
+          framesLoadedCount++;
+        };
+        img.addEventListener("load", mark, { once: true });
+        img.addEventListener("error", mark, { once: true });
+        img.src = frameUrl(section.framesDir, i);
+        frameImgs.push(img);
+      }
+    }
 
     // Window load — fires after every <link>, <script>, above-fold <img>.
     if (document.readyState === "complete") {
@@ -107,8 +112,7 @@ export default function HeroLoader() {
     };
 
     const tick = () => {
-      // 4 weighted task groups: poster, fonts, critical frames, window-load
-      const framesProgress = framesLoadedCount / HERO_CRITICAL_FRAMES;
+      const framesProgress = framesLoadedCount / TOTAL_SCRUB_FRAMES;
       const taskProgress =
         (Number(posterLoaded) +
           Number(fontsLoaded) +
@@ -120,7 +124,7 @@ export default function HeroLoader() {
       const allDone =
         posterLoaded &&
         fontsLoaded &&
-        framesLoadedCount >= HERO_CRITICAL_FRAMES &&
+        framesLoadedCount >= TOTAL_SCRUB_FRAMES &&
         windowLoaded;
       const timeTarget = allDone
         ? taskTarget
@@ -138,9 +142,6 @@ export default function HeroLoader() {
 
     return () => {
       cancelAnimationFrame(raf);
-      // Cancel pending image loads so we don't leak when navigation happens
-      // mid-load — clearing src is the cross-browser way to abort an Image
-      // download.
       poster.src = "";
       for (const img of frameImgs) img.src = "";
     };
